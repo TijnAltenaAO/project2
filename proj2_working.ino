@@ -1,5 +1,4 @@
 // Define LDR pins (random gpio chosen, need to check first)
-
 // base
 #define LDR1 32
 #define LDR2 33
