@@ -145,6 +145,7 @@ void loop() {
 
     delay(5000);
 
+    // check if direction = 1 needed here.
     startMotor(360, direction);
     Serial.println("start motor 360");
 
