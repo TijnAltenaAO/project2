@@ -142,7 +142,7 @@ void loop() {
     } else {
       digitalWrite(chargeBatLED, LOW);
     }
-
+    // test for git
     digitalWrite(MOTOR_SLEEP, HIGH);  // wake up driver
     delay(500);
     Serial.println("entering loop");
