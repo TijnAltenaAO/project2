@@ -130,11 +130,27 @@ void setup() {
 
 void loop() {
   if (run == true) {
-       digitalWrite(MOTOR_SLEEP, HIGH);  // wake up driver
+    // leds for batteries
+    if (analogRead(controlBatRead) < 3100) {  // less than 3.5V
+      digitalWrite(controlBatLED, HIGH);
+    } else {
+      digitalWrite(controlBatLED, LOW);
+    }
+
+    if (analogRead(chargeBatRead) > 3400) {  // change to 3700 or smth.
+      digitalWrite(chargeBatLED, HIGH);
+    } else {
+      digitalWrite(chargeBatLED, LOW);
+    }
+
+    digitalWrite(MOTOR_SLEEP, HIGH);  // wake up driver
     delay(500);
     Serial.println("entering loop");
-
     resetPanelAngle();
+
+    Serial.println("panel angle set. Continuing to 360.");
+
+
     run = false;
     return;
   }
