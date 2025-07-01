@@ -43,36 +43,57 @@ TaskHandle_t myTaskHandle = NULL;
 
 
 // task to flip Motor without blocking loop.
-void myTask(void *parameter) {
-  while (1) {
-    if (digitalRead(upperLimitSwitch) == HIGH && (millis() - lastPressUpper) > 3000) {  // check if should be HIGH, I think so.
-      Serial.println("LIMIT HIT");
-      lastPressUpper = millis();
-      Serial.print("before not gate: ");
+// void myTask(void *parameter) {
+//   while (1) {
+//     if (digitalRead(upperLimitSwitch) == HIGH && (millis() - lastPressUpper) > 3000) {  // check if should be HIGH, I think so.
+//       Serial.println("LIMIT HIT");
+//       lastPressUpper = millis();
+//       Serial.print("before not gate: ");
 
-      Serial.println(direction);
+//       Serial.println(direction);
 
-      direction = !direction;
-      Serial.println("after not gate: ");
-      Serial.println(direction);
+//       direction = !direction;
+//       Serial.println("after not gate: ");
+//       Serial.println(direction);
 
-      stopMotor(180);
-      delay(1500);
-      startMotor(180, direction);
-    }
+//       stopMotor(180);
+//       delay(1500);
+//       startMotor(180, direction);
+//     }
 
-    if (digitalRead(baseLimitSwitch) == LOW && (millis() - lastPressBase) > debounceTime) {
-      lastPressBase = millis();
-      direction = !direction;
-      stopMotor(360);
-      delay(1500);
-      startMotor(360, direction);
-    }
+//     if (digitalRead(baseLimitSwitch) == LOW && (millis() - lastPressBase) > debounceTime) {
+//       lastPressBase = millis();
+//       direction = !direction;
+//       stopMotor(360);
+//       delay(1500);
+//       startMotor(360, direction);
+//     }
 
-    Serial.println(direction);
+//     Serial.println(direction);
 
-    vTaskDelay(10 / portTICK_PERIOD_MS);  // Wait 1000 ms @todo put back to 10
+//     vTaskDelay(10 / portTICK_PERIOD_MS);  // Wait 1000 ms @todo put back to 10
+//   }
+// }
+
+void resetPanelAngle() {
+  Serial.println("entered reset panel function");
+  // direction = true;
+  startMotor(180, direction);
+  Serial.println("motor started");
+  while (digitalRead(upperLimitSwitch) == LOW) {
+    // do nothing
+    Serial.println("limit not hit");
+    delay(10);
   }
+  Serial.println("limit hit");
+  stopMotor(180);
+  Serial.println("stop motor");
+  delay(200);
+  startMotor(180, !direction);
+
+  delay(1600);  // set to proper timing.
+  stopMotor(180);
+  delay(10);  // for motors sake might increase.
 }
 
 void setup() {
@@ -109,90 +130,99 @@ void setup() {
 
 void loop() {
   if (run == true) {
-    digitalWrite(MOTOR_SLEEP, HIGH);  // wake up driver
+       digitalWrite(MOTOR_SLEEP, HIGH);  // wake up driver
+    delay(500);
+    Serial.println("entering loop");
 
-    delay(100);  // delay for serial monitor and driver.
-    Serial.println("Entering loop");
-
-    if (analogRead(controlBatRead) < 3100) {  // less than 3.5V
-      digitalWrite(controlBatLED, HIGH);
-    } else {
-      digitalWrite(controlBatLED, LOW);
-    }
-
-    if (analogRead(chargeBatRead) > 3400) {  // change to 3700 or smth.
-      digitalWrite(chargeBatLED, HIGH);
-    } else {
-      digitalWrite(chargeBatLED, LOW);
-    }
-
-    maxBaseVal = maxBaseLdr();
     resetPanelAngle();
-    Serial.println("set panel angle");
-
-    // Start a FreeRTOS task on Core 0 to monitor out limit switches.
-    xTaskCreatePinnedToCore(
-      myTask,         // Task function
-      "MyTask",       // Name
-      12000,          // Stack size (words) // morgen hoger proberen.
-      NULL,           // Parameters
-      1,              // Priority
-      &myTaskHandle,  // Task handle
-      0               // Run on core 0 (loop runs on core 1)
-    );
-
-    Serial.println("set task");
-
-    delay(5000);
-
-    // check if direction = 1 needed here.
-    startMotor(360, direction);
-    Serial.println("start motor 360");
-
-    while (
-      (readMiddleLdr() != (maxBaseVal - (maxBaseVal / 50))) && !(readMiddleLdr() > (maxBaseVal - (maxBaseVal / 50)))) {
-      // Serial.println(direction);
-    }
-
-    if ((millis() - lastPressBase) < 500) {  // check if 500 suffices
-      Serial.println("position is on limit, so we go further");
-
-      delay(500);  // check if 500 suffices
-    }
-
-    stopMotor(360);  // add delay to be sure.
-    Serial.println("found 360 position");
-    delay(1500);
-    Serial.println("start saving data.");
-    maxMiddleVal = maxMiddleLdr();
-    Serial.println("gathered enough data");
-    delay(2000);
-
-    Serial.println("start looking.");
-
-    startMotor(180, direction);
-
-    while (
-      (readMiddleLdr() != (maxMiddleVal - (maxMiddleVal / 10))) && !(readMiddleLdr() > (maxMiddleVal - (maxMiddleVal / 10)))) {
-      Serial.println("seeking");
-    }
-
-    if ((millis() - lastPressUpper) < 500) {  // check if 500 suffices
-      Serial.println("position is on limit, so we go further");
-      delay(500);  // check if 500 suffices and if rtos still triggers here.
-    }
-
-    Serial.println("found 180 position");
-
-    stopMotor(180);
-    delay(1500);  // for driver.
-
-    digitalWrite(MOTOR_SLEEP, LOW);  // put driver to sleep.
-    digitalWrite(chargeBatLED, LOW);
-    digitalWrite(controlBatLED, LOW);
     run = false;
-    delay(1500);  // for driver.
+    return;
   }
+  // if (run == true) {
+  //   digitalWrite(MOTOR_SLEEP, HIGH);  // wake up driver
+
+  //   delay(100);  // delay for serial monitor and driver.
+  //   Serial.println("Entering loop");
+
+  //   if (analogRead(controlBatRead) < 3100) {  // less than 3.5V
+  //     digitalWrite(controlBatLED, HIGH);
+  //   } else {
+  //     digitalWrite(controlBatLED, LOW);
+  //   }
+
+  //   if (analogRead(chargeBatRead) > 3400) {  // change to 3700 or smth.
+  //     digitalWrite(chargeBatLED, HIGH);
+  //   } else {
+  //     digitalWrite(chargeBatLED, LOW);
+  //   }
+
+  //   maxBaseVal = maxBaseLdr();
+  //   resetPanelAngle();
+  //   Serial.println("set panel angle");
+
+  //   // Start a FreeRTOS task on Core 0 to monitor out limit switches.
+  //   xTaskCreatePinnedToCore(
+  //     myTask,         // Task function
+  //     "MyTask",       // Name
+  //     12000,          // Stack size (words) // morgen hoger proberen.
+  //     NULL,           // Parameters
+  //     1,              // Priority
+  //     &myTaskHandle,  // Task handle
+  //     0               // Run on core 0 (loop runs on core 1)
+  //   );
+
+  //   Serial.println("set task");
+
+  //   delay(5000);
+
+  //   // check if direction = 1 needed here.
+  //   startMotor(360, direction);
+  //   Serial.println("start motor 360");
+
+  //   while (
+  //     (readMiddleLdr() != (maxBaseVal - (maxBaseVal / 50))) && !(readMiddleLdr() > (maxBaseVal - (maxBaseVal / 50)))) {
+  //     // Serial.println(direction);
+  //   }
+
+  //   if ((millis() - lastPressBase) < 500) {  // check if 500 suffices
+  //     Serial.println("position is on limit, so we go further");
+
+  //     delay(500);  // check if 500 suffices
+  //   }
+
+  //   stopMotor(360);  // add delay to be sure.
+  //   Serial.println("found 360 position");
+  //   delay(1500);
+  //   Serial.println("start saving data.");
+  //   maxMiddleVal = maxMiddleLdr();
+  //   Serial.println("gathered enough data");
+  //   delay(2000);
+
+  //   Serial.println("start looking.");
+
+  //   startMotor(180, direction);
+
+  //   while (
+  //     (readMiddleLdr() != (maxMiddleVal - (maxMiddleVal / 5))) && !(readMiddleLdr() > (maxMiddleVal - (maxMiddleVal / 5)))) {
+  //     Serial.println("seeking");
+  //   }
+
+  //   if ((millis() - lastPressUpper) < 500) {  // check if 500 suffices
+  //     Serial.println("position is on limit, so we go further");
+  //     delay(500);  // check if 500 suffices and if rtos still triggers here.
+  //   }
+
+  //   Serial.println("found 180 position");
+
+  //   stopMotor(180);
+  //   delay(1500);  // for driver.
+
+  //   digitalWrite(MOTOR_SLEEP, LOW);  // put driver to sleep.
+  //   digitalWrite(chargeBatLED, LOW);
+  //   digitalWrite(controlBatLED, LOW);
+  //   run = false;
+  //   delay(1500);  // for driver.
+  // }
 }
 
 
@@ -240,24 +270,6 @@ int maxBaseLdr() {
   return getMax(ldrBaseArr, size);
 }
 
-void resetPanelAngle() {
-  direction = true;
-
-  startMotor(180, direction);
-
-  while (digitalRead(upperLimitSwitch) == LOW) {
-    // do nothing
-  }
-
-  stopMotor(180);
-  delay(200);
-  startMotor(180, !direction);
-
-  delay(1600);  // set to proper timing.
-  stopMotor(180);
-  delay(10);  // for motors sake might increase.
-}
-
 // function for reading middle panel ldr
 int readMiddleLdr() {
   return analogRead(LDR7) * 1.5;
@@ -266,7 +278,7 @@ int readMiddleLdr() {
 // function for reading max panel ldr
 int maxMiddleLdr() {
   int duration = 2000;  // ik zeg maar wat.
-  // direction = 1; // propably dumb. check at home why
+  // direction = 1; // propably dumb. check at home why. it was int direction = 1 first. maybe check if direction = 1 works.
   startMotor(180, direction);
 
   for (int i = 0; i < duration; i++) {
@@ -277,7 +289,7 @@ int maxMiddleLdr() {
 
   stopMotor(180);
   Serial.println("stopped saving data");
-  delay(2000); // yusu
+  delay(2000);  // yusu
   int size = sizeof(middleLdrArr) / sizeof(middleLdrArr[0]);
 
   return getMax(middleLdrArr, size) * 1.5;
